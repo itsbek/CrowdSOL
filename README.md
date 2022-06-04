@@ -58,6 +58,8 @@ To simplify the end gaol out of the platform, I quickly created a (very dirty) u
 
 ![image](https://imgur.com/a/3X3rnNE)
 
+![Alt text](./user-story.jpg?raw=true "Optional Title")
+
 ## Roadmap
 
 - [ ]  frontend
