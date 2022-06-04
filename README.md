@@ -56,8 +56,6 @@ To simplify the end gaol out of the platform, I quickly created a (very dirty) u
 
 [![Miro](https://img.shields.io/badge/Miro-050038?style=for-the-badge&logo=Miro&logoColor=white)](https://miro.com/app/board/uXjVOyF3qBM=/)
 
-![image](https://imgur.com/a/3X3rnNE)
-
 ![Alt text](./user-story.jpg?raw=true "Optional Title")
 
 ## Roadmap
