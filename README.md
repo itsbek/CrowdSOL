@@ -5,6 +5,8 @@ This is not a production ready app and was built solely for educational purposes
 
 Idea behind the app is to create a fundraising platform which accepts SOLs(Solana's Crypto) in an easy, fast and secure fasion.
 
+`development` branch is for CI/CD pipline and `main` for the finalized code
+
 ## Demo
 
 Coming soon...
