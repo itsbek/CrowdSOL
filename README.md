@@ -62,9 +62,15 @@ To simplify the end gaol out of the platform, I quickly created a (very dirty) u
 
 ## Roadmap
 
+- [x]  initiate a new fundraiser
+- [x]  withdraw Funds to wallet
+- [x]  make a donation
+- [x]  initiator can end the fundraise
 - [ ]  frontend
 - [ ]  commission logic for the platform
-- [ ]  reward logic for referrals and top 10 donators 
+- [ ]  reward logic for referrals 
+- [ ]  reward logic for 10 donators  
 - [ ]  platform token (CHRT) transfer logic using SPL
+
 
 
