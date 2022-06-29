@@ -69,7 +69,7 @@ To simplify the end gaol out of the platform, I quickly created a (very dirty) u
 - [ ]  frontend
 - [ ]  commission logic for the platform
 - [ ]  reward logic for referrals 
-- [ ]  reward logic for 10 donators  
+- [ ]  reward logic for top 10 donators  
 - [ ]  platform token (CHRT) transfer logic using SPL
 
 
