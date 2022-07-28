@@ -1,7 +1,7 @@
 [features]
 seeds = false
 [programs.localnet]
-fundraise_platform = "4bXnBxEYTg5UB3qQHDtswBKQpYAyDqNC9E1qGQnQmK5e"
+fundraise_platform = "GEK7AjSZwmrbKLkJWjhGGr8JFQ2djmmRoq4CgmoZuXJu"
 
 [registry]
 url = "https://anchor.projectserum.com"

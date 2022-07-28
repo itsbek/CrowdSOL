@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_lang::solana_program::program::invoke;
 use anchor_lang::solana_program::system_instruction::transfer;
 
-declare_id!("4bXnBxEYTg5UB3qQHDtswBKQpYAyDqNC9E1qGQnQmK5e");
+declare_id!("GEK7AjSZwmrbKLkJWjhGGr8JFQ2djmmRoq4CgmoZuXJu");
 
 #[program]
 pub mod fundraise_platform {
@@ -124,6 +124,25 @@ pub mod fundraise_platform {
 
         Ok(())
     }
+
+    pub fn end_fundraise(ctx: Context<EndFundraise>) -> Result<()> {
+        let rent_exemption = Rent::get()?.minimum_balance(Funds::SIZE);
+
+        let from = ctx.accounts.fundraise_platform.to_account_info();
+        let to = ctx.accounts.authority.to_account_info();
+
+        let active_amount = **from.lamports.borrow() - rent_exemption;
+
+        **from.try_borrow_mut_lamports()? -= active_amount;
+        **to.try_borrow_mut_lamports()? += active_amount;
+
+        emit!(CancelEvent {
+            at: Clock::get()?.unix_timestamp,
+            amount: active_amount,
+        });
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -164,7 +183,6 @@ pub struct Withdraw<'info> {
     pub fundraise_platform: Account<'info, Funds>,
     pub system_program: Program<'info, System>,
 }
-
 #[derive(Accounts)]
 #[instruction(id: u64, amount: u64)]
 pub struct Contribute<'info> {
@@ -198,6 +216,20 @@ pub struct Contribute<'info> {
         bump
     )]
     pub top_ten_contributors: Account<'info, TopTenContributors>,
+}
+
+#[derive(Accounts)]
+pub struct EndFundraise<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        has_one = authority,
+        seeds = [b"fundraise_platform", fundraise_platform.authority.key().as_ref()],
+        bump
+    )]
+    pub fundraise_platform: Account<'info, Funds>,
+    pub system_program: Program<'info, System>,
 }
 
 #[account]
@@ -262,6 +294,11 @@ pub struct ContributionEvent {
 
 #[event]
 pub struct WithdrawEvent {
+    at: i64,
+    amount: u64,
+}
+#[event]
+pub struct CancelEvent {
     at: i64,
     amount: u64,
 }
