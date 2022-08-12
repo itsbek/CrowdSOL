@@ -23,6 +23,7 @@ describe('fundraise platform simulation tests', () => {
   const systemProgram = SystemProgram.programId;
   let owner = provider.wallet;
   let authority = owner.publicKey;
+  let serviceOwner = owner.publicKey;
 
   async function search_fundraise_platform(authority: anchor.web3.PublicKey) {
     return await anchor.web3.PublicKey.findProgramAddress(
@@ -228,7 +229,7 @@ describe('fundraise platform simulation tests', () => {
     assert.equal(
       progBefore - progAfter - raised,
       authAfter - authBefore,
-      'oops! you are not autherized to withdraw!'
+      'oops! you are not autherized to withdraw commission!'
     );
   });
 
@@ -384,5 +385,31 @@ describe('fundraise platform simulation tests', () => {
     let top = await getTop10(authority);
     assert.equal(top[0].amount, 100, 'Top #1 contributor amount must be 100');
     assert.equal(top[1].amount, 77, 'Top #2 contributor amount must be 77');
+  });
+
+  it('Test commission withdrawal', async () => {
+    let [fundraisePlatform] = await search_fundraise_platform(serviceOwner);
+    let progBefore = await get_balance(fundraisePlatform);
+    let authBefore = await get_balance(serviceOwner);
+    let raised = (
+      await program.account.funds.fetch(fundraisePlatform)
+    ).raised.toNumber();
+
+    await program.methods
+      .withdrawCommission()
+      .accounts({
+        fundraisePlatform,
+        serviceOwner,
+      })
+      .rpc();
+
+    let progAfter = await get_balance(fundraiseService);
+    let authAfter = await get_balance(serviceOwner);
+
+    assert.equal(
+      progBefore - progAfter - raised,
+      authAfter - authBefore,
+      'oops! you are not autherized to withdraw!'
+    );
   });
 });
