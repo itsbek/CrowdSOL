@@ -31,6 +31,12 @@ describe('fundraise platform simulation tests', () => {
       program.programId
     );
   }
+  async function search_fundraise_campaign(authority: anchor.web3.PublicKey) {
+    return await anchor.web3.PublicKey.findProgramAddress(
+      [Buffer.from('campaign'), authority.toBuffer()],
+      program.programId
+    );
+  }
 
   async function search_top_ten_contributors(authority: anchor.web3.PublicKey) {
     return await anchor.web3.PublicKey.findProgramAddress(
@@ -120,6 +126,32 @@ describe('fundraise platform simulation tests', () => {
     );
     assert.deepEqual(funds.authority, authority, 'different authorities!');
     assert.equal(funds.raised, 0, "raised amount ain't 0!");
+  });
+
+  it(' Testing new fundraise creation', async () => {
+    let [fundraisePlatform] = await search_fundraise_platform(authority);
+    let [fundraiseCampaign] = await search_fundraise_campaign(authority);
+
+    let campaignState = await program.account.campaingAcc.fetch(
+      fundraisePlatform
+    );
+
+    await program.methods
+      .createNewCampaign()
+      .accounts({
+        campaignAuthority: contributor.publicKey(),
+        campaignAcc: fundraiseCampaign,
+        fundraisePlatform: fundraisePlatform,
+      })
+      .signers([contributor])
+      .rpc();
+
+    let fundraiseState = await program.account.campaignAcc.fetch(
+      fundraiseCampaign
+    );
+
+    assert(fundraiseState.commission.eq(new anchor.BN(0)));
+    assert(fundraiseState.campaignAuthority.equals(contributor.publicKey));
   });
 
   it('User ID=0 can contribute x amount of lamports', async () => {
@@ -272,6 +304,22 @@ describe('fundraise platform simulation tests', () => {
     let ptData = await fundsInfo.fetch(fundraisePlatform);
 
     assert.equal(ptData.idCounter, newId + 1, 'counter has different IDs');
+  });
+
+  it('commission withdrawal', async () => {
+    let [fundraisePlatform] = await search_fundraise_platform(authority);
+    let campaingAcc = await program.account.campaingAcc.fetch(
+      fundraisePlatform
+    );
+    assert(campaingAcc.commission.gtn(0));
+
+    await program.methods
+      .withdrawCommission()
+      .accounts({
+        fundraisePlatform: fundraisePlatform,
+        authority: owner.publicKey,
+      })
+      .rpc();
   });
 
   it('incrementing ID works 2 times for a new user', async () => {

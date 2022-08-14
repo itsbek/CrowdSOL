@@ -4,7 +4,7 @@ use anchor_lang::solana_program::system_instruction::transfer;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("7gNSLTU9NJzEhZHJUSH3ArJ9Z2gLQfxKJJZZFs32LvrA");
+declare_id!("GKPpuwrtJ8o7BCucyTiu1yaoG6ka7jbXJEBARwdaAWcJ");
 
 const FUNDRAISE_CAMPAIGN_CAP: usize = 10;
 
@@ -30,7 +30,6 @@ pub mod fundraise_platform {
         fundraise_platform.raised = 0;
         fundraise_platform.id_counter = 0;
 
-    
         // TODO: reward top10
         // TODO: reward refferral
         fundraise_platform.chrt_reward = chrt_reward;
@@ -53,7 +52,7 @@ pub mod fundraise_platform {
         campaign_acc.campaign_authority = ctx.accounts.campaign_authority.key();
         // TODO: cleanup unused args
         campaign_acc.is_commission_free = false;
-        // campaign_acc.is_active = false;
+        campaign_acc.is_active = true;
         campaign_acc.chrt_recieved = 0;
 
         // TODO: add max active campaigns
@@ -76,7 +75,7 @@ pub mod fundraise_platform {
         );
 
         let campaign_acc = &mut ctx.accounts.campaign_acc;
-        // require!(campaign_acc.is_active, FundraiseErrors::CampaignNotActive);
+        require!(campaign_acc.is_active, FundraiseErrors::CampaignNotActive);
 
         let contributor = &ctx.accounts.contributor;
 
@@ -191,34 +190,6 @@ pub mod fundraise_platform {
         )?;
         /* ----------end of referral reward logic----------- */
 
-        /* -----------reward top 10 donators-------------*/
-        // TODO: reward top 10 donators
-        let current_time = Clock::get()?.unix_timestamp;
-        if current_time >= fundraise_platform.n_period_cooldown {
-            let mut destination = **ctx.accounts.destination;
-
-            while !top_ten_contributors.contributors.is_empty() {
-                destination.owner = top_ten_contributors.contributors[0].address;
-
-                anchor_spl::token::mint_to(
-                    CpiContext::new_with_signer(
-                        ctx.accounts.token_program.to_account_info(), //##11
-                        anchor_spl::token::MintTo {
-                            mint: ctx.accounts.mint_acc.to_account_info(),
-                            to: ctx.accounts.destination.to_account_info(),
-                            authority: ctx.accounts.mint_acc.to_account_info(),
-                        },
-                        &[&["faucet-mint".as_bytes(), &[bump]]],
-                    ),
-                    fundraise_platform.chrt_reward,
-                )?;
-
-                top_ten_contributors.contributors.remove(0);
-            }
-            fundraise_platform.n_period_cooldown = current_time + fundraise_platform.n_period;
-        }
-        /* -----------end ofreward top 10 donators-------------*/
-
         emit!(ContributionEvent {
             at: Clock::get()?.unix_timestamp,
             amount,
@@ -296,16 +267,14 @@ pub mod fundraise_platform {
     pub fn end_fundraise(ctx: Context<EndFundraise>, id: u64) -> Result<()> {
         let fundraise_platform = &mut ctx.accounts.fundraise_platform;
         let campaign_acc = &mut ctx.accounts.campaign_acc;
-        
-        require!(
-            !campaign_acc.is_active,
-            FundraiseErrors::CampaignNotActive
-        );
+
+        require!(!campaign_acc.is_active, FundraiseErrors::CampaignNotActive);
         require!(
             fundraise_platform.chrt_camp_close_threshold > campaign_acc.chrt_cover_goal,
             FundraiseErrors::InsufficientTokens
         );
-        campaign_acc.is_active = true;
+        campaign_acc.is_active = false;
+        // TODO: alternate binary_search_by for better speed
         let curr_raised_amount = fundraise_platform
             .raised_campaign_amounts
             .binary_search_by(|x| x.campaign_id.cmp(&id))
@@ -339,21 +308,55 @@ pub mod fundraise_platform {
             fundraise_platform_owner.key() == fundraise_platform_account.authority,
             FundraiseErrors::NotTheOwner
         );
-        
+
         let from = fundraise_platform_account.to_account_info();
         let to = fundraise_platform_owner.to_account_info();
 
-        **from
-            .try_borrow_mut_lamports()? -= fundraise_platform_account.commission;
-        **to.try_borrow_mut_lamports()? +=
-            fundraise_platform_account.commission;
+        **from.try_borrow_mut_lamports()? -= fundraise_platform_account.commission;
+        **to.try_borrow_mut_lamports()? += fundraise_platform_account.commission;
 
         fundraise_platform_account.commission = 0;
 
         Ok(())
     }
 
-    // pub fn reward_top_donators (ctx: Context<Contribute>)
+    // pub fn reward_top_donators (ctx: Context<RewardTopContributors>) -> Result<()> {
+
+    //           /* -----------reward top 10 donators-------------*/
+    //     let fundraise_platform = &mut ctx.accounts.fundraise_platform;
+    //     require!(ctx.accounts.authority.key() == fundraise_platform.authority, FundraiseErrors::NotTheOwner);
+    //     let top_ten_contributors = &mut ctx.accounts.top_ten_contributors;
+
+    //     let mut top3 = top_ten_contributors.contributors.iter().enumerate().sort().take(3);
+
+    //     let current_time = Clock::get()?.unix_timestamp;
+    //     if current_time >= fundraise_platform.n_period_cooldown {
+    //         let mut destination = **ctx.accounts.destination;
+
+    //         while !top3.is_empty() {
+    //             destination.owner = top3[0].address;
+
+    //             anchor_spl::token::mint_to(
+    //                 CpiContext::new_with_signer(
+    //                     ctx.accounts.token_program.to_account_info(), //##11
+    //                     anchor_spl::token::MintTo {
+    //                         mint: ctx.accounts.mint_acc.to_account_info(),
+    //                         to: ctx.accounts.destination.to_account_info(),
+    //                         authority: ctx.accounts.mint_acc.to_account_info(),
+    //                     },
+    //                     &[&["faucet-mint".as_bytes()]],
+    //                 ),
+    //                 fundraise_platform.chrt_reward,
+    //             )?;
+
+    //             top3.remove(0);
+    //         }
+    //         fundraise_platform.n_period_cooldown = current_time + fundraise_platform.n_period;
+    //     }
+    //     /* -----------end ofreward top 10 donators-------------*/
+    //      Ok(())
+    // }
+
 }
 
 #[derive(Accounts)]
@@ -448,38 +451,17 @@ pub struct Contribute<'info> {
     #[account(mut, seeds=[b"campaign", id.to_string().as_bytes(), campaign_acc.campaign_authority.key().as_ref()], bump)]
     pub campaign_acc: Box<Account<'info, FundraiseAccount>>,
     #[account(
-        init_if_needed,
-        payer = minter,
         seeds = [b"chrt_mint".as_ref()],
         bump,
         mint::decimals = 3,
         mint::authority = mint_acc
     )]
-    pub mint_acc: Account<'info, Mint>, //##8
+    pub mint_acc: Account<'info, Mint>,
 
-    #[account(
-        init_if_needed,
-        payer = minter,
-        associated_token::mint = mint_acc,
-        associated_token::authority = adestination
-    )]
-    pub destination: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub adestination: AccountInfo<'info>,
-    #[account(mut)]
-    pub minter: Signer<'info>,
-    #[account(
-        init_if_needed,
-        payer = minter,
-        associated_token::mint = mint_acc,
-        associated_token::authority = areceiver
+    #[account(mut, token::mint = mint_acc
     )]
     pub referrer_acc: Account<'info, TokenAccount>,
-    #[account(mut)]
-    pub areceiver: AccountInfo<'info>,
-    pub rent: Sysvar<'info, Rent>,
     pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[derive(Accounts)]
@@ -518,6 +500,48 @@ pub struct EndFundraise<'info> {
     #[account(mut, seeds=[b"campaign", id.to_string().as_bytes()], bump)]
     pub campaign_acc: Box<Account<'info, FundraiseAccount>>,
     pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RewardTopContributors<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        seeds = [b"fundraise_platform", fundraise_platform.authority.key().as_ref()],
+        bump
+    )]
+    pub fundraise_platform: Box<Account<'info, Funds>>,
+
+    #[account(
+        mut,
+        seeds = [b"top_ten_contributors", fundraise_platform.authority.key().as_ref()],
+        bump
+    )]
+    pub top_ten_contributors: Account<'info, TopTenContributors>,
+    #[account(
+        seeds = [b"chrt_mint".as_ref()],
+        bump,
+        mint::decimals = 3,
+        mint::authority = mint_acc
+    )]
+    pub mint_acc: Account<'info, Mint>,
+    #[account(
+        init_if_needed,
+        payer = minter,
+        associated_token::mint = mint_acc,
+        associated_token::authority = adestination
+    )]
+    pub destination: Account<'info, TokenAccount>,
+    #[account(mut)]
+    /// CHECK: This is not dangerous because we don't read or write from this account
+    pub adestination: AccountInfo<'info>,
+    #[account(mut)]
+    pub minter: Signer<'info>,
+    pub system_program: Program<'info, System>,
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
